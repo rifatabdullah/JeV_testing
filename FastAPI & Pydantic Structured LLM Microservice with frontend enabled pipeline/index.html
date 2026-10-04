@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RPG Character Generator UI</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+    input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+    button { padding: 10px 20px; cursor: pointer; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-top: 20px; display: none; }
+  </style>
+</head>
+<body>
+
+  <h2>RPG Character Generator</h2>
+  <input type="text" id="promptInput" value="Create a level 5 elven rogue named Lyra.">
+  <button onclick="generateCharacter()">Generate Character</button>
+
+  <div id="characterCard" class="card">
+    <h3 id="charName"></h3>
+    <p><strong>Class:</strong> <span id="charClass"></span></p>
+    <p><strong>Level:</strong> <span id="charLevel"></span></p>
+    <p><strong>Abilities:</strong></p>
+    <ul id="charAbilities"></ul>
+  </div>
+
+  <script>
+    async function generateCharacter() {
+      const promptText = document.getElementById("promptInput").value;
+      const card = document.getElementById("characterCard");
+      
+      try {
+        // 1. Send request to your running FastAPI backend
+        const response = await fetch("http://127.0.0.1:8000/generate_character", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: promptText })
+        });
+
+        if (!response.ok) throw new Error("API Server Error");
+
+        // 2. Parse the JSON response
+        const data = await response.json();
+
+        // 3. Update the UI DOM with returned Pydantic data
+        document.getElementById("charName").textContent = data.name;
+        document.getElementById("charClass").textContent = data.character_class;
+        document.getElementById("charLevel").textContent = data.level;
+
+        const abilitiesList = document.getElementById("charAbilities");
+        abilitiesList.innerHTML = "";
+        data.abilities.forEach(ability => {
+          const li = document.createElement("li");
+          li.textContent = ability;
+          abilitiesList.appendChild(li);
+        });
+
+        card.style.display = "block";
+
+      } catch (err) {
+        alert("Error connecting to FastAPI backend: " + err.message);
+      }
+    }
+  </script>
+
+</body>
+</html>

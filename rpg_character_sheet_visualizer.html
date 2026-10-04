@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Character Sheet Generator & Visualizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        fantasy: ['Cinzel', 'serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        rpg: {
+                            gold: '#fbbf24',
+                            crimson: '#e11d48',
+                            arcane: '#a855f7',
+                            emerald: '#10b981',
+                            darkBg: '#0b0f19',
+                            cardBg: '#111827',
+                            panelBg: '#1f2937',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        
+        /* Stat bar animation transition */
+        .stat-bar-fill {
+            transition: width 0.5s ease-out;
+        }
+
+        /* Glowing aura effect */
+        .glow-effect {
+            box-shadow: 0 0 25px -5px rgba(168, 85, 247, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-rpg-darkBg text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-purple-500 selection:text-white">
+
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-gradient-to-br from-amber-500/20 to-purple-600/20 text-amber-400 rounded-xl border border-amber-500/30 shadow-inner">
+                    <i class="fa-solid fa-dice-d20 text-2xl animate-spin-slow"></i>
+                </div>
+                <div>
+                    <h1 class="font-fantasy font-bold text-xl tracking-wider text-amber-400">HERO SCRIBE AI</h1>
+                    <p class="text-xs text-slate-400">Structured LLM Character Sheet Generator</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>
+                    Pydantic Schema Active
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto p-4 sm:p-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Panel: Prompt Controls & Presets -->
+        <section class="lg:col-span-5 flex flex-col space-y-5">
+            
+            <!-- Controls Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col justify-between space-y-5">
+                <div>
+                    <!-- Header -->
+                    <div class="flex justify-between items-center mb-4">
+                        <label for="promptInput" class="text-sm font-semibold text-slate-200 flex items-center">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-2"></i> Character Prompt
+                        </label>
+                        <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">JSON Schema Input</span>
+                    </div>
+
+                    <!-- Prompt Textarea -->
+                    <textarea id="promptInput" rows="4" 
+                        class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3.5 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition placeholder-slate-500 custom-scrollbar resize-none"
+                        placeholder="Describe character archetype, race, class, alignment, and signature powers..."></textarea>
+
+                    <!-- Presets -->
+                    <div class="mt-4">
+                        <p class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Quick Presets</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <button onclick="applyPreset('rogue')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>🗡️</span>
+                                <span>Elven Rogue</span>
+                            </button>
+                            <button onclick="applyPreset('paladin')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>🛡️</span>
+                                <span>Dwarf Paladin</span>
+                            </button>
+                            <button onclick="applyPreset('cyberpunk')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>⚡</span>
+                                <span>Cyber Hacker</span>
+                            </button>
+                            <button onclick="applyPreset('necromancer')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>💀</span>
+                                <span>Lich Necromancer</span>
+                            </button>
+                            <button onclick="applyPreset('monk')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>🧘</span>
+                                <span>Way Monk</span>
+                            </button>
+                            <button onclick="applyPreset('sciFiCommander')" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition border border-slate-700/60 flex items-center justify-center space-x-1.5 active:scale-95">
+                                <span>🚀</span>
+                                <span>Void Marine</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Model Selection -->
+                    <div class="mt-5 border-t border-slate-800 pt-4 space-y-3">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Model & Engine</label>
+                        <select id="modelSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="openai/gpt-4o-mini">OpenAI gpt-4o-mini (Structured Output)</option>
+                            <option value="anthropic/claude-3-5-sonnet">Claude 3.5 Sonnet (JSON Mode)</option>
+                            <option value="meta-llama/llama-3.3-70b">Meta Llama 3.3 70B Instruct</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generateBtn" onclick="generateCharacter()" 
+                    class="w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-900/30 active:scale-[0.98] transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Generate Character Object</span>
+                </button>
+            </div>
+
+            <!-- Pydantic Schema Information -->
+            <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 space-y-2">
+                <div class="flex items-center text-amber-400 font-semibold mb-1">
+                    <i class="fa-solid fa-shield-halved mr-2"></i> Pydantic Contract Active
+                </div>
+                <p>The output is strictly type-checked against Python <code class="text-purple-300 font-mono">CharacterSheet</code> BaseModel including ranges and required lists.</p>
+            </div>
+        </section>
+
+        <section class="lg:col-span-7 flex flex-col space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex-grow flex flex-col glow-effect">
+                
+                <!-- Navigation Tabs -->
+                <div class="flex justify-between items-center pb-4 border-b border-slate-800 mb-5">
+                    <div class="flex items-center space-x-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button id="tabVisual" onclick="switchTab('visual')" 
+                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white transition flex items-center space-x-1.5 shadow">
+                            <i class="fa-solid fa-address-card"></i>
+                            <span>Character Sheet</span>
+                        </button>
+                        <button id="tabJson" onclick="switchTab('json')" 
+                            class="px-4 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-code"></i>
+                            <span>Pydantic JSON Schema</span>
+                        </button>
+                    </div>
+
+                    <button onclick="copyCurrentOutput()" class="text-slate-300 hover:text-white text-xs flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition active:scale-95">
+                        <i class="fa-regular fa-copy"></i>
+                        <span id="copyText">Copy JSON</span>
+                    </button>
+                </div>
+
+                <div id="loadingState" class="hidden flex-grow flex flex-col items-center justify-center py-16 space-y-4">
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
+                        <i class="fa-solid fa-dice-d20 text-purple-400 absolute text-lg animate-pulse"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-base font-semibold text-slate-200">Generating Character Sheet...</p>
+                        <p class="text-xs text-slate-400 mt-1">Simulating LLM response parsing into Pydantic schema</p>
+                    </div>
+                </div>
+
+                <div id="visualOutput" class="flex-grow flex flex-col justify-between space-y-6">
+                    <div>
+                        <!-- Character Header Banner -->
+                        <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-inner">
+                            <div class="absolute -right-6 -bottom-6 text-slate-800/20 text-9xl pointer-events-none">
+                                <i id="charClassIcon" class="fa-solid fa-shield-cat"></i>
+                            </div>
+
+                            <div class="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span id="charClassBadge" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                                            Rogue
+                                        </span>
+                                        <span id="charAlignment" class="text-xs text-slate-400 font-mono bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                                            Chaotic Good
+                                        </span>
+                                    </div>
+                                    <h2 id="charName" class="text-3xl font-fantasy font-bold text-amber-400 tracking-wide">Lyra Shadowstep</h2>
+                                    <p id="charTitle" class="text-xs text-slate-400 italic mt-0.5">The Night Whispers</p>
+                                </div>
+
+                                <!-- Level Indicator -->
+                                <div class="bg-slate-900/90 border border-slate-700/70 p-3 rounded-xl text-center min-w-[90px] shadow-lg">
+                                    <span class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold block">Level</span>
+                                    <div class="flex items-center justify-center space-x-1 mt-0.5">
+                                        <button onclick="adjustLevel(-1)" class="text-slate-400 hover:text-amber-400 text-xs px-1"><i class="fa-solid fa-minus"></i></button>
+                                        <span id="charLevel" class="text-2xl font-black text-amber-400 font-mono">5</span>
+                                        <button onclick="adjustLevel(1)" class="text-slate-400 hover:text-amber-400 text-xs px-1"><i class="fa-solid fa-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Primary Stats Grid (Interactive) -->
+                        <div class="mt-6">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                    <i class="fa-solid fa-chart-simple text-purple-400 mr-1.5"></i> Core Attributes (Click to Adjust)
+                                </h3>
+                                <span class="text-[10px] text-slate-500">Max Value: 20</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <!-- STR -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('strength', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">STR</span>
+                                        <span id="statSTR" class="text-base font-bold font-mono text-amber-400">10</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barSTR" class="bg-amber-400 h-full stat-bar-fill" style="width: 50%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- DEX -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('dexterity', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">DEX</span>
+                                        <span id="statDEX" class="text-base font-bold font-mono text-emerald-400">18</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barDEX" class="bg-emerald-400 h-full stat-bar-fill" style="width: 90%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- CON -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('constitution', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">CON</span>
+                                        <span id="statCON" class="text-base font-bold font-mono text-rose-400">12</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barCON" class="bg-rose-400 h-full stat-bar-fill" style="width: 60%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- INT -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('intelligence', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">INT</span>
+                                        <span id="statINT" class="text-base font-bold font-mono text-sky-400">14</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barINT" class="bg-sky-400 h-full stat-bar-fill" style="width: 70%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- WIS -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('wisdom', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">WIS</span>
+                                        <span id="statWIS" class="text-base font-bold font-mono text-indigo-400">13</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barWIS" class="bg-indigo-400 h-full stat-bar-fill" style="width: 65%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- CHA -->
+                                <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col justify-between cursor-pointer hover:border-slate-700 transition" onclick="adjustStat('charisma', 1)">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-slate-400 font-semibold">CHA</span>
+                                        <span id="statCHA" class="text-base font-bold font-mono text-purple-400">16</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                        <div id="barCHA" class="bg-purple-400 h-full stat-bar-fill" style="width: 80%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Abilities & Equipment Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            
+                            <!-- Special Abilities -->
+                            <div>
+                                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
+                                    <i class="fa-solid fa-bolt text-amber-400 mr-1.5"></i> Abilities
+                                </h3>
+                                <div id="abilitiesContainer" class="space-y-2">
+                                    <!-- Dynamic items -->
+                                </div>
+                            </div>
+
+                            <!-- Inventory Items -->
+                            <div>
+                                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
+                                    <i class="fa-solid fa-bag-shopping text-emerald-400 mr-1.5"></i> Inventory & Gear
+                                </h3>
+                                <div id="inventoryContainer" class="space-y-2">
+                                    <!-- Dynamic items -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Info -->
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+                        <span class="flex items-center text-emerald-400">
+                            <i class="fa-solid fa-circle-check mr-1.5"></i> Valid Pydantic Response Object
+                        </span>
+                        <span id="modelUsedTag" class="font-mono">Engine: openai/gpt-4o-mini</span>
+                    </div>
+                </div>
+
+                <div id="jsonOutput" class="hidden flex-grow flex flex-col">
+                    <div class="relative flex-grow flex flex-col">
+                        <pre class="bg-slate-950 text-purple-300 font-mono text-xs p-4 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar flex-grow"><code id="jsonCode">// Pydantic JSON Output will be rendered here</code></pre>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-slate-200 text-xs px-4 py-3 rounded-xl shadow-2xl hidden flex items-center space-x-2.5 z-50 transition-all">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="toastMsg">Action completed successfully</span>
+    </div>
+
+    <script>
+        // Preset Prompts & Mock Responses matching Pydantic Schema
+        const presetData = {
+            rogue: {
+                prompt: "Create a level 5 elven rogue named Lyra Shadowstep with stealth techniques, daggers, and high dexterity.",
+                data: {
+                    name: "Lyra Shadowstep",
+                    character_class: "Rogue",
+                    title: "The Night Whispers",
+                    alignment: "Chaotic Good",
+                    level: 5,
+                    stats: { strength: 10, dexterity: 18, constitution: 12, intelligence: 14, wisdom: 13, charisma: 16 },
+                    abilities: ["Shadow Step", "Vanish", "Poison Strike"],
+                    inventory: ["Dual Serpent Daggers", "Thieves' Tools", "Cloak of Elvenkind"]
+                }
+            },
+            paladin: {
+                prompt: "Create a level 12 dwarven paladin named Thorin Ironshield dedicated to the Sun Goddess with holy smite powers.",
+                data: {
+                    name: "Thorin Ironshield",
+                    character_class: "Paladin",
+                    title: "Bulwark of the Dawn",
+                    alignment: "Lawful Good",
+                    level: 12,
+                    stats: { strength: 17, dexterity: 10, constitution: 18, intelligence: 10, wisdom: 15, charisma: 16 },
+                    abilities: ["Divine Smite", "Lay on Hands", "Aura of Protection"],
+                    inventory: ["Sun-Forged Warhammer", "Tower Shield of Dawn", "Holy Symbol of Sol"]
+                }
+            },
+            cyberpunk: {
+                prompt: "Create a level 8 Cyberpunk Netrunner hacker named Kaelen Vex with neural implants and cyberware.",
+                data: {
+                    name: "Kaelen Vex",
+                    character_class: "Netrunner",
+                    title: "Ghost in the Grid",
+                    alignment: "Neutral",
+                    level: 8,
+                    stats: { strength: 8, dexterity: 15, constitution: 11, intelligence: 20, wisdom: 14, charisma: 12 },
+                    abilities: ["System Override", "RAM Overclock", "Daemon Injection"],
+                    inventory: ["Mil-Spec Cyberdeck", "Monofilament Wire", "Optic Camo Cloak"]
+                }
+            },
+            necromancer: {
+                prompt: "Create a level 20 Lich Necromancer named Lord Malakor who summons undead hordes and wields dark magic.",
+                data: {
+                    name: "Lord Malakor",
+                    character_class: "Necromancer",
+                    title: "Master of the Undying",
+                    alignment: "Neutral Evil",
+                    level: 20,
+                    stats: { strength: 8, dexterity: 12, constitution: 16, intelligence: 20, wisdom: 17, charisma: 15 },
+                    abilities: ["Animate Dead", "Soul Drain", "Gasp of the Tomb"],
+                    inventory: ["Staff of Ossuary", "Phylactery Amulet", "Grimoire of Shadows"]
+                }
+            },
+            monk: {
+                prompt: "Create a level 6 Way of the Open Hand monk named Master Jin with swift martial arts and Ki strikes.",
+                data: {
+                    name: "Master Jin",
+                    character_class: "Monk",
+                    title: "The Silent Wind",
+                    alignment: "Lawful Neutral",
+                    level: 6,
+                    stats: { strength: 12, dexterity: 18, constitution: 14, intelligence: 11, wisdom: 17, charisma: 10 },
+                    abilities: ["Flurry of Blows", "Patient Defense", "Quivering Palm"],
+                    inventory: ["Prayer Beads", "Iron-Banded Staff", "Healing Salve"]
+                }
+            },
+            sciFiCommander: {
+                prompt: "Create a level 15 Void Marine Commander named Major Vance with power armor and plasma weapons.",
+                data: {
+                    name: "Major Vance",
+                    character_class: "Void Marine",
+                    title: "Vanguard Commander",
+                    alignment: "Lawful Neutral",
+                    level: 15,
+                    stats: { strength: 18, dexterity: 12, constitution: 17, intelligence: 13, wisdom: 14, charisma: 16 },
+                    abilities: ["Tactical Command", "Plasma Barrage", "Adrenaline Surge"],
+                    inventory: ["MK-IV Exo-Armor", "Heavy Plasma Rifle", "Tactical HUD Scanner"]
+                }
+            }
+        };
+
+        // State object
+        let currentCharacter = JSON.parse(JSON.stringify(presetData.rogue.data));
+
+        // Initialization
+        window.onload = function() {
+            document.getElementById('promptInput').value = presetData.rogue.prompt;
+            renderCharacter(currentCharacter);
+        };
+
+        function applyPreset(key) {
+            if (presetData[key]) {
+                document.getElementById('promptInput').value = presetData[key].prompt;
+                currentCharacter = JSON.parse(JSON.stringify(presetData[key].data));
+                renderCharacter(currentCharacter);
+                showToast(`Loaded ${currentCharacter.name} preset!`, 'info');
+            }
+        }
+
+        function switchTab(tab) {
+            const visualTab = document.getElementById('tabVisual');
+            const jsonTab = document.getElementById('tabJson');
+            const visualOutput = document.getElementById('visualOutput');
+            const jsonOutput = document.getElementById('jsonOutput');
+
+            if (tab === 'visual') {
+                visualTab.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white transition flex items-center space-x-1.5 shadow";
+                jsonTab.className = "px-4 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5";
+                visualOutput.classList.remove('hidden');
+                jsonOutput.classList.add('hidden');
+            } else {
+                jsonTab.className = "px-4 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white transition flex items-center space-x-1.5 shadow";
+                visualTab.className = "px-4 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center space-x-1.5";
+                jsonOutput.classList.remove('hidden');
+                visualOutput.classList.add('hidden');
+            }
+        }
+
+        function generateCharacter() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            const model = document.getElementById('modelSelect').value;
+
+            if (!prompt) {
+                showToast("Please enter a character prompt!", "error");
+                return;
+            }
+
+            // Show loading animation
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('visualOutput').classList.add('hidden');
+            document.getElementById('jsonOutput').classList.add('hidden');
+            document.getElementById('generateBtn').disabled = true;
+
+            // Simulate LLM parsing & Pydantic output validation delay
+            setTimeout(() => {
+                // Find matching preset or generate dynamic
+                const promptLower = prompt.toLowerCase();
+                let matched = false;
+
+                for (let key in presetData) {
+                    if (promptLower.includes(key) || promptLower.includes(presetData[key].data.character_class.toLowerCase())) {
+                        currentCharacter = JSON.parse(JSON.stringify(presetData[key].data));
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    // Fallback generator
+                    currentCharacter = {
+                        name: "Custom Hero",
+                        character_class: "Adventurer",
+                        title: "The Unbound",
+                        alignment: "Neutral",
+                        level: Math.floor(Math.random() * 10) + 1,
+                        stats: {
+                            strength: Math.floor(Math.random() * 10) + 8,
+                            dexterity: Math.floor(Math.random() * 10) + 8,
+                            constitution: Math.floor(Math.random() * 10) + 8,
+                            intelligence: Math.floor(Math.random() * 10) + 8,
+                            wisdom: Math.floor(Math.random() * 10) + 8,
+                            charisma: Math.floor(Math.random() * 10) + 8
+                        },
+                        abilities: ["Power Strike", "Arcane Shield", "Quick Reflexes"],
+                        inventory: ["Iron Sword", "Leather Armor", "Health Potion"]
+                    };
+                }
+
+                document.getElementById('modelUsedTag').textContent = `Engine: ${model}`;
+                renderCharacter(currentCharacter);
+
+                // Restore UI
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('generateBtn').disabled = false;
+
+                const isVisual = !document.getElementById('tabVisual').classList.contains('text-slate-400');
+                if (isVisual) {
+                    document.getElementById('visualOutput').classList.remove('hidden');
+                } else {
+                    document.getElementById('jsonOutput').classList.remove('hidden');
+                }
+
+                showToast("Pydantic JSON parsed successfully!", "success");
+            }, 800);
+        }
+
+        function renderCharacter(data) {
+            document.getElementById('charName').textContent = data.name;
+            document.getElementById('charClassBadge').textContent = data.character_class;
+            document.getElementById('charTitle').textContent = data.title;
+            document.getElementById('charAlignment').textContent = data.alignment;
+            document.getElementById('charLevel').textContent = data.level;
+
+            // Update Class Icon
+            const iconElem = document.getElementById('charClassIcon');
+            const cls = data.character_class.toLowerCase();
+            if (cls.includes('rogue')) iconElem.className = "fa-solid fa-user-ninja";
+            else if (cls.includes('paladin')) iconElem.className = "fa-solid fa-shield-halved";
+            else if (cls.includes('netrunner') || cls.includes('hacker')) iconElem.className = "fa-solid fa-microchip";
+            else if (cls.includes('necromancer')) iconElem.className = "fa-solid fa-skull";
+            else if (cls.includes('monk')) iconElem.className = "fa-solid fa-hand";
+            else iconElem.className = "fa-solid fa-shield-cat";
+
+            // Update Stat Bars
+            updateStatUI('STR', data.stats.strength);
+            updateStatUI('DEX', data.stats.dexterity);
+            updateStatUI('CON', data.stats.constitution);
+            updateStatUI('INT', data.stats.intelligence);
+            updateStatUI('WIS', data.stats.wisdom);
+            updateStatUI('CHA', data.stats.charisma);
+
+            // Render Abilities
+            const abContainer = document.getElementById('abilitiesContainer');
+            abContainer.innerHTML = '';
+            data.abilities.forEach(ability => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-xs text-slate-200";
+                item.innerHTML = `<i class="fa-solid fa-bolt text-amber-400 text-xs"></i><span>${ability}</span>`;
+                abContainer.appendChild(item);
+            });
+
+            // Render Inventory
+            const invContainer = document.getElementById('inventoryContainer');
+            invContainer.innerHTML = '';
+            data.inventory.forEach(gear => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-950 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-xs text-slate-200";
+                item.innerHTML = `<i class="fa-solid fa-box text-emerald-400 text-xs"></i><span>${gear}</span>`;
+                invContainer.appendChild(item);
+            });
+
+            // Render JSON Code
+            document.getElementById('jsonCode').textContent = JSON.stringify(data, null, 2);
+        }
+
+        function updateStatUI(key, val) {
+            document.getElementById(`stat${key}`).textContent = val;
+            const bar = document.getElementById(`bar${key}`);
+            const percentage = Math.min((val / 20) * 100, 100);
+            bar.style.width = `${percentage}%`;
+        }
+
+        function adjustLevel(delta) {
+            let newLvl = currentCharacter.level + delta;
+            if (newLvl >= 1 && newLvl <= 100) {
+                currentCharacter.level = newLvl;
+                renderCharacter(currentCharacter);
+            }
+        }
+
+        function adjustStat(statName, delta) {
+            if (currentCharacter.stats[statName] !== undefined) {
+                let val = currentCharacter.stats[statName] + delta;
+                if (val > 20) val = 1; // loop around for easy testing
+                currentCharacter.stats[statName] = val;
+                renderCharacter(currentCharacter);
+            }
+        }
+
+        function copyCurrentOutput() {
+            const jsonText = JSON.stringify(currentCharacter, null, 2);
+            
+            // Clipboard copy fallbacks
+            const textarea = document.createElement("textarea");
+            textarea.value = jsonText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Copied JSON schema to clipboard!", "success");
+            } catch (err) {
+                showToast("Failed to copy", "error");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = msg;
+            if (type === "error") {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-rose-400";
+            } else if (type === "info") {
+                toastIcon.className = "fa-solid fa-circle-info text-sky-400";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
